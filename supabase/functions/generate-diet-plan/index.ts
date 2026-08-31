@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,8 +88,42 @@ serve(async (req) => {
   }
 
   try {
-    const { clientDetails, customPrompt, numberOfDays = 7, startDate }: { clientDetails: ClientDetails; customPrompt?: string; numberOfDays?: number; startDate?: string } = await req.json();
-    
+    const { clientDetails, customPrompt, numberOfDays = 7, startDate, clientId }: { clientDetails: ClientDetails; customPrompt?: string; numberOfDays?: number; startDate?: string; clientId?: string } = await req.json();
+
+    if (clientId) {
+      const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+      const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+
+      const { data: client, error: clientErr } = await admin
+        .from("clients")
+        .select("is_active, service_end_date")
+        .eq("id", clientId)
+        .single();
+
+      if (clientErr || !client) {
+        return new Response(JSON.stringify({ error: "Client not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const isExpired = client.service_end_date && new Date(client.service_end_date) < new Date(new Date().toDateString());
+      if (!client.is_active || isExpired) {
+        // Self-heal: make sure the flag matches reality for this client too.
+        if (client.is_active) {
+          await admin.from("clients").update({ is_active: false, portal_access_enabled: false }).eq("id", clientId);
+          await admin.from("client_portal_users").update({ is_active: false }).eq("client_id", clientId);
+        }
+        return new Response(
+          JSON.stringify({ error: "This client's service period has ended. Diet chart generation is disabled until their service is renewed." }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");

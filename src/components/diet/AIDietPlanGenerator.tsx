@@ -644,6 +644,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
 
   const getClientDetails = () => {
     if (!selectedClient) return null;
+    if (!selectedClient.is_active) { toast.error("This client's service period has ended", { description: 'Diet chart generation is disabled until their service is renewed.' }); return null; }
     if (!selectedClient.height || !selectedClient.weight) { toast.error('Client must have height and weight set'); return null; }
     if (!selectedClient.gender) { toast.error('Client must have gender set'); return null; }
     if (!selectedClient.goal) { toast.error('Client must have health goal set'); return null; }
@@ -705,6 +706,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
           customPrompt: customPrompt.trim() || undefined,
           numberOfDays: parseInt(numberOfDays),
           startDate: startDateString,
+          clientId: selectedClientId,
         },
       });
 
@@ -1547,7 +1549,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
 
     let logoDataUrl = '';
     try {
-      const response = await fetch('/MKR Logo.webp');
+      const response = await fetch('/vitazia-logo.jpg');
       const blob = await response.blob();
       const reader = new FileReader();
       logoDataUrl = await new Promise((resolve) => {
@@ -1709,7 +1711,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
 </head>
 <body>
   <div class="header">
-    <img src="${logoDataUrl}" alt="MKR Logo" class="header-logo" />
+    <img src="${logoDataUrl}" alt="Vitazia Wellness Logo" class="header-logo" />
     <h1>${generatedPlan.planName}</h1>
     <p>Personalized Diet Plan for ${clientDetails.name}
       <span class="week-badge">${getFullPlanName()}</span>
@@ -1864,7 +1866,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
   })())}
 
   <div class="footer">
-    © ${new Date().getFullYear()} Dr. Malika Kabra Rathi. This nutrition plan is personalized and should be followed as advised.
+    © ${new Date().getFullYear()} Vitazia Wellness. This nutrition plan is personalized and should be followed as advised.
   </div>
 </body>
 </html>`;

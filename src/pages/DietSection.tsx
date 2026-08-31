@@ -165,7 +165,7 @@ const DietSection = () => {
         </head>
         <body>
           <div class="header">
-            <h1>DR. MALIKA KABRA RATHI - NUTRITION CLINIC</h1>
+            <h1>VITAZIA WELLNESS</h1>
             <h2>Diet Plan: ${planName}</h2>
             <p><strong>Client:</strong> ${clientName}</p>
             <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
@@ -198,7 +198,7 @@ const DietSection = () => {
             </tbody>
           </table>
           <p style="margin-top: 30px; color: #64748b;">
-            © 2026 Dr. Malika Kabra Rathi. This nutrition plan is personalized and should be followed as advised.
+            © 2026 Vitazia Wellness. This nutrition plan is personalized and should be followed as advised.
           </p>
         </body>
       </html>
@@ -222,8 +222,8 @@ const DietSection = () => {
 
     const client = clients.find(c => c.id === selectedClient);
     const clientEmail = client?.email || '';
-    const subject = encodeURIComponent(`Nutrition Plan: ${planName} - Dr. Malika Kabra Rathi`);
-    const body = encodeURIComponent(`Dear ${client?.name || 'Client'},\n\nPlease find attached your personalized nutrition plan: ${planName}\n\nBest regards,\nDr. Malika Kabra Rathi Team`);
+    const subject = encodeURIComponent(`Nutrition Plan: ${planName} - Vitazia Wellness`);
+    const body = encodeURIComponent(`Dear ${client?.name || 'Client'},\n\nPlease find attached your personalized nutrition plan: ${planName}\n\nBest regards,\nDt. Shweta Nagar\nVitazia Wellness Team`);
     
     window.open(`mailto:${clientEmail}?subject=${subject}&body=${body}`);
     toast.success('Email client opened!');

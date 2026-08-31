@@ -61,7 +61,6 @@ interface ClientFormData {
   pause_start_date: string;
   pause_duration_days: string;
   measurement_date: string;
-  initial_bmi: string;
   initial_body_fat_percent: string;
   initial_visceral_fat: string;
   initial_muscle_mass: string;
@@ -80,6 +79,12 @@ interface ClientFormData {
 export interface ClientFormSubmission {
   client: Record<string, any>;
   initialMeasurement?: Omit<BodyMeasurementInput, 'client_id'>;
+}
+
+function calcBmi(weightKg: number | null, heightCm: number | null) {
+  if (!weightKg || !heightCm || heightCm <= 0) return null;
+  const m = heightCm / 100;
+  return Math.round((weightKg / (m * m)) * 10) / 10;
 }
 
 const emptyFormData: ClientFormData = {
@@ -110,7 +115,6 @@ const emptyFormData: ClientFormData = {
   pause_start_date: '',
   pause_duration_days: '',
   measurement_date: '',
-  initial_bmi: '',
   initial_body_fat_percent: '',
   initial_visceral_fat: '',
   initial_muscle_mass: '',
@@ -170,7 +174,6 @@ export const ClientFormDialog = ({ open, onOpenChange, client, onSubmit, isLoadi
         pause_start_date: (client as any).pause_start_date || '',
         pause_duration_days: (client as any).service_paused_days?.toString() || '',
         measurement_date: '',
-        initial_bmi: '',
         initial_body_fat_percent: '',
         initial_waist: '',
         initial_hip: '',
@@ -236,9 +239,12 @@ export const ClientFormDialog = ({ open, onOpenChange, client, onSubmit, isLoadi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const weight = formData.weight ? parseFloat(formData.weight) : null;
+    const height = formData.height ? parseFloat(formData.height) : null;
+    const bmi = calcBmi(weight, height);
+
     const initialMeasurement = !isEdit && (
       formData.weight ||
-      formData.initial_bmi ||
       formData.initial_body_fat_percent ||
       formData.initial_visceral_fat ||
       formData.initial_muscle_mass ||
@@ -254,8 +260,8 @@ export const ClientFormDialog = ({ open, onOpenChange, client, onSubmit, isLoadi
       formData.initial_measurement_notes.trim()
     ) ? {
       measurement_date: formData.measurement_date || new Date().toISOString().split('T')[0],
-      weight: formData.weight ? parseFloat(formData.weight) : null,
-      bmi: formData.initial_bmi ? parseFloat(formData.initial_bmi) : null,
+      weight,
+      bmi,
       body_fat_percent: formData.initial_body_fat_percent ? parseFloat(formData.initial_body_fat_percent) : null,
       visceral_fat: formData.initial_visceral_fat ? parseFloat(formData.initial_visceral_fat) : null,
       muscle_mass: formData.initial_muscle_mass ? parseFloat(formData.initial_muscle_mass) : null,
@@ -682,8 +688,13 @@ export const ClientFormDialog = ({ open, onOpenChange, client, onSubmit, isLoadi
                     <Input id="initial_resting_metabolism" type="number" step="1" min="0" value={formData.initial_resting_metabolism} onChange={(e) => setFormData({ ...formData, initial_resting_metabolism: e.target.value })} placeholder="e.g., 1650" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="initial_bmi">BMI</Label>
-                    <Input id="initial_bmi" type="number" step="0.01" min="0" value={formData.initial_bmi} onChange={(e) => setFormData({ ...formData, initial_bmi: e.target.value })} placeholder="e.g., 24.1" />
+                    <Label>BMI</Label>
+                    <div className="flex h-9 items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground">
+                      {calcBmi(
+                        formData.weight ? parseFloat(formData.weight) : null,
+                        formData.height ? parseFloat(formData.height) : null,
+                      ) ?? (formData.height ? '—' : 'Enter height above')}
+                    </div>
                   </div>
                 </div>
               </div>

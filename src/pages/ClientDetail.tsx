@@ -18,6 +18,7 @@ import {
 } from '@/hooks/useClientDetail';
 import { useUpdateClient } from '@/hooks/useClients';
 import { ClientMeasurementsPanel } from '@/components/clients/ClientMeasurementsPanel';
+import { ServiceRenewalHistory } from '@/components/clients/ServiceRenewalHistory';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -320,6 +321,12 @@ function ProgressRow({ entry }: { entry: ProgressEntry }) {
 // ---------------------------------------------------------------------------
 // Profile Editor (inline)
 // ---------------------------------------------------------------------------
+function calcBmi(weightKg: number | null, heightCm: number | null) {
+  if (!weightKg || !heightCm || heightCm <= 0) return null;
+  const m = heightCm / 100;
+  return Math.round((weightKg / (m * m)) * 10) / 10;
+}
+
 function ProfileTab({ client }: { client: any }) {
   const [editing, setEditing] = useState(false);
   const updateClient = useUpdateClient();
@@ -336,10 +343,13 @@ function ProfileTab({ client }: { client: any }) {
   });
 
   const handleSave = async () => {
+    const weight = form.weight ? parseFloat(form.weight) : null;
+    const height = form.height ? parseFloat(form.height) : null;
     await updateClient.mutateAsync({
       id: client.id,
-      weight: form.weight ? parseFloat(form.weight) : null,
-      height: form.height ? parseFloat(form.height) : null,
+      weight,
+      height,
+      bmi: calcBmi(weight, height),
       goal: (form.goal || null) as any,
       diet_preference: (form.diet_preference || null) as any,
       supplements: form.supplements || null,
@@ -395,6 +405,12 @@ function ProfileTab({ client }: { client: any }) {
           <CardHeader className="p-0 pb-2"><CardTitle className="text-sm">Health Profile</CardTitle></CardHeader>
           <F label="Weight (kg)" field="weight" type="number" />
           <F label="Height (cm)" field="height" type="number" />
+          <div>
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">BMI</p>
+            <p className="text-sm">
+              {calcBmi(form.weight ? parseFloat(form.weight) : null, form.height ? parseFloat(form.height) : null) ?? '—'}
+            </p>
+          </div>
           <div>
             <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Goal</p>
             {editing ? (
@@ -775,6 +791,7 @@ const ClientDetail = () => {
       <Tabs defaultValue="profile">
         <TabsList className="mb-6">
           <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsTrigger value="service">Service</TabsTrigger>
           <TabsTrigger value="intake">
             Intake Form {intakeSubmissions.length > 0 && <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 text-[10px] font-medium text-primary">{intakeSubmissions.length}</span>}
           </TabsTrigger>
@@ -787,6 +804,10 @@ const ClientDetail = () => {
 
         <TabsContent value="profile">
           <ProfileTab client={client} />
+        </TabsContent>
+
+        <TabsContent value="service">
+          <ServiceRenewalHistory client={client} />
         </TabsContent>
 
         <TabsContent value="intake">
@@ -826,7 +847,7 @@ const ClientDetail = () => {
         </TabsContent>
 
         <TabsContent value="measurements">
-          <ClientMeasurementsPanel clientId={id!} clientName={client?.name ?? ''} />
+          <ClientMeasurementsPanel clientId={id!} clientName={client?.name ?? ''} heightCm={client?.height ?? null} />
         </TabsContent>
       </Tabs>
     </DashboardLayout>

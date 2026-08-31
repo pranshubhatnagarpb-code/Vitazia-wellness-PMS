@@ -28,6 +28,7 @@ export interface Client {
   diet_preference: string | null;
   service_start_date: string | null;
   service_duration_months: number | null;
+  service_end_date: string | null;
   number_of_diet_charts: number | null;
   employee_id: string | null;
   portal_access_enabled: boolean;
@@ -40,15 +41,24 @@ export interface Client {
 
 export type ClientInput = Omit<Client, 'id' | 'created_at' | 'updated_at'>;
 
+// Self-heals clients whose service duration has ended: flips is_active /
+// portal_access_enabled off (DB-side, see _db/service-duration-expiry.sql).
+// Best-effort — a failure here shouldn't block the clients list from loading.
+const expireEndedClients = async () => {
+  const { error } = await supabase.rpc('expire_ended_clients');
+  if (error) console.error('expire_ended_clients failed:', error.message);
+};
+
 export const useClients = () => {
   return useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
+      await expireEndedClients();
       const { data, error } = await supabase
         .from('clients')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data as Client[];
     },
@@ -105,12 +115,13 @@ export const useActiveClients = () => {
   return useQuery({
     queryKey: ['clients', 'active'],
     queryFn: async () => {
+      await expireEndedClients();
       const { data, error } = await supabase
         .from('clients')
         .select('*')
         .eq('is_active', true)
         .order('name');
-      
+
       if (error) throw error;
       return data as Client[];
     },

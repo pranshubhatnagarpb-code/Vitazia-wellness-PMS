@@ -25,6 +25,18 @@ export const useCreateDietPlan = () => {
   
   return useMutation({
     mutationFn: async (input: CreateDietPlanInput) => {
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('is_active, service_end_date')
+        .eq('id', input.client_id)
+        .single();
+      if (clientError) throw clientError;
+
+      const isExpired = client.service_end_date && new Date(client.service_end_date) < new Date(new Date().toDateString());
+      if (!client.is_active || isExpired) {
+        throw new Error("This client's service period has ended. Diet chart generation is disabled until their service is renewed.");
+      }
+
       const { data: plan, error: planError } = await supabase
         .from('diet_plans')
         .insert({

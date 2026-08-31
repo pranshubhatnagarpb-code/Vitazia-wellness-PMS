@@ -327,6 +327,68 @@ export type Database = {
           },
         ]
       }
+      client_service_renewals: {
+        Row: {
+          amount_paid: number | null
+          client_id: string
+          created_at: string
+          id: string
+          new_service_duration_months: number
+          new_service_end_date: string | null
+          new_service_start_date: string
+          notes: string | null
+          previous_service_duration_months: number | null
+          previous_service_end_date: string | null
+          previous_service_paused_days: number | null
+          previous_service_start_date: string | null
+          renewed_at: string
+          renewed_by: string | null
+          renewed_by_email: string | null
+        }
+        Insert: {
+          amount_paid?: number | null
+          client_id: string
+          created_at?: string
+          id?: string
+          new_service_duration_months: number
+          new_service_end_date?: string | null
+          new_service_start_date: string
+          notes?: string | null
+          previous_service_duration_months?: number | null
+          previous_service_end_date?: string | null
+          previous_service_paused_days?: number | null
+          previous_service_start_date?: string | null
+          renewed_at?: string
+          renewed_by?: string | null
+          renewed_by_email?: string | null
+        }
+        Update: {
+          amount_paid?: number | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          new_service_duration_months?: number
+          new_service_end_date?: string | null
+          new_service_start_date?: string
+          notes?: string | null
+          previous_service_duration_months?: number | null
+          previous_service_end_date?: string | null
+          previous_service_paused_days?: number | null
+          previous_service_start_date?: string | null
+          renewed_at?: string
+          renewed_by?: string | null
+          renewed_by_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_service_renewals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -351,6 +413,7 @@ export type Database = {
           phone: string | null
           portal_access_enabled: boolean
           service_duration_months: number | null
+          service_end_date: string | null
           service_paused_days: number
           service_start_date: string | null
           skin_type: string | null
@@ -847,6 +910,18 @@ export type Database = {
       }
       get_portal_client_id: { Args: never; Returns: string }
       is_portal_client: { Args: never; Returns: boolean }
+      expire_ended_clients: { Args: never; Returns: undefined }
+      renew_client_service: {
+        Args: {
+          p_client_id: string
+          p_new_start_date: string
+          p_new_duration_months: number
+          p_amount_paid?: number | null
+          p_notes?: string | null
+          p_renewed_by_email?: string | null
+        }
+        Returns: Database["public"]["Tables"]["clients"]["Row"]
+      }
     }
     Enums: {
       [_ in never]: never

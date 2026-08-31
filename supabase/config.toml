@@ -1,1 +1,4 @@
-project_id = "qaaqpizwpniprtdzredy"
+project_id = "fuamnpgehhibpzqoydvz"
+
+[functions.intake-to-client]
+verify_jwt = false

@@ -445,7 +445,7 @@ export function buildDietPlanHtml(
   </div>` : ''}
 
   <div class="footer">
-    <p>© ${new Date().getFullYear()} Dr. Malika Kabra Rathi - Personalized Nutrition Plan</p>
+    <p>© ${new Date().getFullYear()} Vitazia Wellness - Personalized Nutrition Plan</p>
   </div>
 </body>
 </html>`;
@@ -498,14 +498,14 @@ export function buildDietPlanHtml(
       `).join('')}
     </tbody>
   </table>
-  <div class="footer">© ${new Date().getFullYear()} Dr. Malika Kabra Rathi - Personalized Nutrition Plan</div>
+  <div class="footer">© ${new Date().getFullYear()} Vitazia Wellness - Personalized Nutrition Plan</div>
 </body>
 </html>`;
 }
 
 // ---------------------------------------------------------------------------
 // Rich HTML builder — matches the AIDietPlanGenerator "Download PDF" format
-// (green #5a7a32 theme, MKR logo, full client details grid)
+// (green #116735 theme, Vitazia logo, full client details grid)
 // ---------------------------------------------------------------------------
 
 function buildRichAIPlanHtml(
@@ -644,7 +644,7 @@ function buildRichAIPlanHtml(
 </head>
 <body>
   <div class="header">
-    ${logoDataUrl ? `<img src="${logoDataUrl}" alt="MKR Logo"/>` : ''}
+    ${logoDataUrl ? `<img src="${logoDataUrl}" alt="Vitazia Wellness Logo"/>` : ''}
     <h1>${aiData.planName ?? planMeta.planName}</h1>
     <p>Personalized Diet Plan for ${client?.name ?? 'Client'}
       <span class="week-badge">${planMeta.weekLabel}</span>
@@ -726,7 +726,7 @@ function buildRichAIPlanHtml(
   ${recipesHtml}
   ${affiliateHtml}
 
-  <div class="footer">© ${new Date().getFullYear()} Dr. Malika Kabra Rathi. This nutrition plan is personalized and should be followed as advised.</div>
+  <div class="footer">© ${new Date().getFullYear()} Vitazia Wellness. This nutrition plan is personalized and should be followed as advised.</div>
 </body>
 </html>`;
 }
@@ -751,7 +751,7 @@ export async function openDietPlanForPrint(plan: any): Promise<void> {
   const [logoDataUrl, recipes, affiliateProducts] = await Promise.all([
     (async () => {
       try {
-        const res = await fetch('/MKR Logo.webp');
+        const res = await fetch('/vitazia-logo.jpg');
         const blob = await res.blob();
         return await new Promise<string>((resolve) => {
           const reader = new FileReader();

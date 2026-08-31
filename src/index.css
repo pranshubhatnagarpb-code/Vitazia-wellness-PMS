@@ -6,54 +6,55 @@
 
 @layer base {
   :root {
-    --background: 220 20% 96%;
-    --foreground: 222 25% 12%;
+    /* Aligned with client-wellness-portal-main's palette */
+    --background: 129 24% 98%;
+    --foreground: 205 72% 7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 25% 12%;
+    --card-foreground: 205 72% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 25% 12%;
+    --popover-foreground: 205 72% 7%;
 
-    --primary: 175 65% 32%;
+    --primary: 141 100% 19%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 175 45% 94%;
-    --secondary-foreground: 175 55% 22%;
+    --secondary: 129 32% 94%;
+    --secondary-foreground: 134 34% 20%;
 
-    --muted: 220 16% 93%;
-    --muted-foreground: 220 10% 46%;
+    --muted: 206 41% 94%;
+    --muted-foreground: 205 15% 39%;
 
-    --accent: 175 45% 94%;
-    --accent-foreground: 175 55% 25%;
+    --accent: 129 35% 91%;
+    --accent-foreground: 142 91% 12%;
 
-    --destructive: 0 72% 52%;
+    --destructive: 357 100% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 70% 28%;
+    --success: 127 51% 39%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 90% 47%;
-    --warning-foreground: 0 0% 100%;
+    --warning: 38 79% 51%;
+    --warning-foreground: 36 92% 10%;
 
-    --border: 220 13% 89%;
-    --input: 220 13% 89%;
-    --ring: 175 65% 32%;
+    --border: 206 22% 90%;
+    --input: 206 22% 90%;
+    --ring: 141 100% 19%;
 
-    --radius: 0.875rem;
+    --radius: 0.75rem;
 
     /* Sidebar — dark navy */
     --sidebar-background: 222 32% 12%;
     --sidebar-foreground: 220 15% 58%;
-    --sidebar-primary: 175 65% 48%;
+    --sidebar-primary: 145 60% 34%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 25% 19%;
     --sidebar-accent-foreground: 220 15% 82%;
     --sidebar-border: 222 22% 19%;
-    --sidebar-ring: 175 65% 48%;
+    --sidebar-ring: 145 60% 34%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(175, 65%, 32%) 0%, hsl(168, 65%, 40%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(141, 100%, 19%) 0%, hsl(86, 55%, 51%) 100%);
 
     /* Shadows */
     --shadow-xs:   0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -66,33 +67,33 @@
   }
 
   .dark {
-    --background: 222 30% 8%;
-    --foreground: 220 20% 94%;
-    --card: 222 28% 11%;
-    --card-foreground: 220 20% 94%;
-    --popover: 222 28% 11%;
-    --popover-foreground: 220 20% 94%;
-    --primary: 175 65% 44%;
+    --background: 209 68% 4%;
+    --foreground: 156 15% 94%;
+    --card: 205 38% 9%;
+    --card-foreground: 156 15% 94%;
+    --popover: 205 38% 9%;
+    --popover-foreground: 156 15% 94%;
+    --primary: 139 53% 34%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 222 25% 18%;
-    --secondary-foreground: 175 50% 75%;
-    --muted: 222 25% 16%;
-    --muted-foreground: 220 12% 58%;
-    --accent: 222 25% 18%;
-    --accent-foreground: 175 50% 75%;
-    --destructive: 0 62% 38%;
+    --secondary: 205 40% 13%;
+    --secondary-foreground: 129 9% 87%;
+    --muted: 205 40% 13%;
+    --muted-foreground: 205 15% 56%;
+    --accent: 134 35% 11%;
+    --accent-foreground: 129 9% 87%;
+    --destructive: 0 85% 62%;
     --destructive-foreground: 0 0% 98%;
-    --border: 222 22% 20%;
-    --input: 222 22% 20%;
-    --ring: 175 65% 44%;
+    --border: 205 22% 20%;
+    --input: 205 22% 20%;
+    --ring: 139 53% 34%;
     --sidebar-background: 222 35% 8%;
     --sidebar-foreground: 220 15% 55%;
-    --sidebar-primary: 175 65% 48%;
+    --sidebar-primary: 145 60% 34%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 222 28% 15%;
     --sidebar-accent-foreground: 220 15% 80%;
     --sidebar-border: 222 25% 16%;
-    --sidebar-ring: 175 65% 48%;
+    --sidebar-ring: 145 60% 34%;
   }
 }
 
@@ -112,8 +113,8 @@
   /* Premium scrollbar */
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: hsl(220 13% 82%); border-radius: 999px; }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(220 10% 68%); }
+  ::-webkit-scrollbar-thumb { background: hsl(206 13% 82%); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(206 10% 68%); }
 }
 
 @layer utilities {

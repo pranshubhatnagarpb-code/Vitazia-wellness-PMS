@@ -116,13 +116,13 @@ export const AppSidebar = () => {
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[hsl(var(--primary)/0.2)] ring-1 ring-[hsl(var(--primary)/0.3)]">
               <img
-                src="/MKR Logo.webp"
-                alt="MKR"
+                src="/vitazia-logo.jpg"
+                alt="Vitazia Wellness"
                 className="w-5 h-5 object-contain"
               />
             </div>
             <div>
-              <p className="text-[13px] font-bold text-white tracking-wide leading-none">MKR CLINIC</p>
+              <p className="text-[13px] font-bold text-white tracking-wide leading-none">VITAZIA WELLNESS</p>
               <p className="text-[10px] text-[hsl(var(--sidebar-foreground))] mt-0.5 leading-none">Practice Management</p>
             </div>
           </div>
