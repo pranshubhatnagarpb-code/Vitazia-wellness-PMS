@@ -1,8 +1,0 @@
-<<<<<<< HEAD
-project_id = "qaaqpizwpniprtdzredy"
-=======
-project_id = "cxzlkorkmabffwrzewjy"
-
-[functions.extract-blood-report]
-verify_jwt = false
->>>>>>> 48916de (feat: enhance client management with diet data and body measurements)

@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Home, ChevronRight, Plus, FileText, Calendar, Pencil, Trash2, Copy, Eye, RefreshCw, Check, X } from 'lucide-react';
+import { Home, ChevronRight, Plus, FileText, Calendar, Pencil, Trash2, Copy, Eye, RefreshCw, Check, X, Upload } from 'lucide-react';
 import {
   useDietChartTemplates,
   useCreateTemplate,
@@ -18,6 +18,7 @@ import {
   type TemplateDay,
   type TemplateMeal,
 } from '@/hooks/useDietChartTemplates';
+import { ImportTemplatesDialog } from '@/components/templates/ImportTemplatesDialog';
 
 // Tabular layout interfaces
 interface TemplateMealTimeRow {
@@ -61,6 +62,7 @@ const Templates = () => {
   const [editingMealTime, setEditingMealTime] = useState<number | null>(null);
   const [mealTimeEditValue, setMealTimeEditValue] = useState('');
   const [searchFilter, setSearchFilter] = useState('');
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   // Filter templates based on search
   const filteredTemplates = templates.filter(template => {
@@ -509,11 +511,19 @@ const Templates = () => {
           <h1 className="text-2xl font-bold text-foreground">Diet Chart Templates</h1>
           <p className="text-sm text-muted-foreground mt-1">Create reusable diet chart templates to quickly assign to clients</p>
         </div>
-        <Button className="gradient-primary text-primary-foreground" onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Template
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import from Excel
+          </Button>
+          <Button className="gradient-primary text-primary-foreground" onClick={openCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Template
+          </Button>
+        </div>
       </div>
+
+      <ImportTemplatesDialog open={isImportOpen} onOpenChange={setIsImportOpen} />
 
       {/* Search Filter */}
       <div className="mb-6">

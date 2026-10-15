@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { dishName } = await req.json();
+    const { dishName, servings, additionalInstructions } = await req.json();
 
     if (!dishName || typeof dishName !== "string" || dishName.trim().length === 0) {
       return new Response(
@@ -20,6 +20,13 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const servingsText = typeof servings === "string" || typeof servings === "number"
+      ? String(servings).trim()
+      : "";
+    const extraInstructions = typeof additionalInstructions === "string"
+      ? additionalInstructions.trim()
+      : "";
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
@@ -58,7 +65,15 @@ Focus on:
 - Exact quantities and measurements
 - Clear step-by-step instructions
 - Practical tips for best results
-- Accurate nutrition estimates`;
+- Accurate nutrition estimates
+- If a specific number of servings is requested, scale every ingredient quantity accordingly and set "servings" in the JSON to match it
+- If additional instructions are given, follow them precisely (e.g. dietary restrictions, spice level, cooking method, ingredient substitutions) without breaking the recipe's authenticity unless the instructions say otherwise`;
+
+    const userPrompt = [
+      `Give me a detailed recipe for: ${dishName.trim()}`,
+      servingsText ? `Scale the recipe for exactly ${servingsText} servings.` : null,
+      extraInstructions ? `Additional instructions: ${extraInstructions}` : null,
+    ].filter(Boolean).join("\n\n");
 
     const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
 
@@ -67,7 +82,7 @@ Focus on:
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Give me a detailed recipe for: ${dishName.trim()}` },
+        { role: "user", content: userPrompt },
       ],
       temperature: 0.7,
     });

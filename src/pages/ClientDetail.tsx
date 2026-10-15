@@ -17,7 +17,7 @@ import {
   type ProgressEntry,
 } from '@/hooks/useClientDetail';
 import { useUpdateClient } from '@/hooks/useClients';
-import { ClientMeasurementsPanel } from '@/components/clients/ClientMeasurementsPanel';
+import { ClientBodyMeasurementsPanel } from '@/components/body-measurements/ClientBodyMeasurementsPanel';
 import { ServiceRenewalHistory } from '@/components/clients/ServiceRenewalHistory';
 
 // ---------------------------------------------------------------------------
@@ -847,7 +847,7 @@ const ClientDetail = () => {
         </TabsContent>
 
         <TabsContent value="measurements">
-          <ClientMeasurementsPanel clientId={id!} clientName={client?.name ?? ''} heightCm={client?.height ?? null} />
+          <ClientBodyMeasurementsPanel clientId={id!} clientName={client?.name ?? ''} />
         </TabsContent>
       </Tabs>
     </DashboardLayout>

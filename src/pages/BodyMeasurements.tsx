@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { useActiveClients } from '@/hooks/useClients';
 import { BodyMeasurementInput, BodyMeasurementWithClientName, useBodyMeasurements, useCreateBodyMeasurement, useDeleteBodyMeasurement, useUpdateBodyMeasurement } from '@/hooks/useBodyMeasurements';
 import { Home, ChevronRight, Activity, Plus, Pencil, Trash2, Scale, Ruler, TrendingUp } from 'lucide-react';
@@ -23,15 +23,39 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Line, LineChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 const chartConfig = {
   weight: { label: 'Weight', color: 'hsl(var(--primary))' },
   bmi: { label: 'BMI', color: 'hsl(var(--success))' },
-  waist: { label: 'Waist', color: 'hsl(var(--warning))' },
-  hip: { label: 'Hip', color: 'hsl(var(--primary))' },
+  body_fat_percent: { label: 'Body Fat %', color: 'hsl(var(--warning))' },
+  visceral_fat: { label: 'Visceral Fat', color: 'hsl(var(--chart-1))' },
+  muscle_mass: { label: 'Muscle Mass', color: 'hsl(var(--chart-2))' },
+  body_age: { label: 'Body Age', color: 'hsl(var(--chart-3))' },
+  resting_metabolism: { label: 'Resting Metabolism', color: 'hsl(var(--chart-4))' },
+  neck: { label: 'Neck', color: 'hsl(var(--chart-5))' },
   chest: { label: 'Chest', color: 'hsl(var(--muted-foreground))' },
+  tummy: { label: 'Tummy', color: 'hsl(var(--primary))' },
+  waist: { label: 'Waist', color: 'hsl(var(--warning))' },
+  hip: { label: 'Hip', color: 'hsl(var(--chart-1))' },
+  thigh: { label: 'Thigh', color: 'hsl(var(--chart-2))' },
+  arm: { label: 'Arm', color: 'hsl(var(--chart-3))' },
 };
+
+const PARAM_OPTIONS: Array<{ key: keyof typeof chartConfig; label: string }> = [
+  { key: 'waist', label: 'Waist' },
+  { key: 'hip', label: 'Hip' },
+  { key: 'chest', label: 'Chest' },
+  { key: 'tummy', label: 'Tummy' },
+  { key: 'thigh', label: 'Thigh' },
+  { key: 'arm', label: 'Arm' },
+  { key: 'neck', label: 'Neck' },
+  { key: 'body_fat_percent', label: 'Body Fat %' },
+  { key: 'visceral_fat', label: 'Visceral Fat (VF)' },
+  { key: 'muscle_mass', label: 'Muscle Mass' },
+  { key: 'body_age', label: 'Body Age' },
+  { key: 'resting_metabolism', label: 'Resting Metabolism (RM)' },
+];
 
 const formatValue = (value: number | null | undefined, suffix = '') => value === null || value === undefined ? '—' : `${value}${suffix}`;
 const formatDelta = (current: number | null | undefined, previous: number | null | undefined, suffix = '') => {
@@ -49,6 +73,7 @@ const BodyMeasurements = () => {
   const { data: clients = [] } = useActiveClients();
   const [selectedClientId, setSelectedClientId] = useState<string>('all');
   const [tab, setTab] = useState('history');
+  const [selectedParam, setSelectedParam] = useState<keyof typeof chartConfig>('waist');
   const [formOpen, setFormOpen] = useState(false);
   const [editingMeasurement, setEditingMeasurement] = useState<BodyMeasurementWithClientName | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BodyMeasurementWithClientName | null>(null);
@@ -68,9 +93,18 @@ const BodyMeasurements = () => {
     date: new Date(entry.measurement_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
     weight: entry.weight,
     bmi: entry.bmi,
+    body_fat_percent: entry.body_fat_percent,
+    visceral_fat: entry.visceral_fat,
+    muscle_mass: entry.muscle_mass,
+    body_age: entry.body_age,
+    resting_metabolism: entry.resting_metabolism,
+    neck: entry.neck,
+    chest: entry.chest,
+    tummy: entry.tummy,
     waist: entry.waist,
     hip: entry.hip,
-    chest: entry.chest,
+    thigh: entry.thigh,
+    arm: entry.arm,
   })), [sortedAsc]);
 
   const handleCreate = async (data: BodyMeasurementInput) => {
@@ -254,22 +288,29 @@ const BodyMeasurements = () => {
           </div>
 
           <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-lg">Waist / Hip / Chest Comparison</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <CardTitle className="text-lg">{chartConfig[selectedParam].label} Trend</CardTitle>
+              <Select value={selectedParam} onValueChange={(v) => setSelectedParam(v as keyof typeof chartConfig)}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select parameter" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PARAM_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardHeader>
             <CardContent>
-              {chartData.length === 0 ? <p className="text-sm text-muted-foreground">Add dated measurements to compare circumference changes over time.</p> : (
+              {chartData.length === 0 ? <p className="text-sm text-muted-foreground">Add dated measurements to see this parameter's trend.</p> : (
                 <ChartContainer config={chartConfig} className="h-[320px] w-full aspect-auto">
-                  <BarChart data={chartData}>
+                  <LineChart data={chartData}>
                     <CartesianGrid vertical={false} />
                     <XAxis dataKey="date" tickLine={false} axisLine={false} />
                     <YAxis tickLine={false} axisLine={false} width={42} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Bar dataKey="waist" fill="var(--color-waist)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="hip" fill="var(--color-hip)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="chest" fill="var(--color-chest)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
+                    <Line type="monotone" dataKey={selectedParam} stroke={`var(--color-${selectedParam})`} strokeWidth={2} dot={{ r: 3 }} />
+                  </LineChart>
                 </ChartContainer>
               )}
             </CardContent>

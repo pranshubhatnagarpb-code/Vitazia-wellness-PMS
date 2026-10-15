@@ -4,6 +4,8 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -29,6 +31,8 @@ interface Recipe {
 
 const Recipes = () => {
   const [dishName, setDishName] = useState("");
+  const [servings, setServings] = useState("");
+  const [additionalInstructions, setAdditionalInstructions] = useState("");
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -43,7 +47,11 @@ const Recipes = () => {
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('generate-recipe', {
-        body: { dishName: dishName.trim() },
+        body: {
+          dishName: dishName.trim(),
+          servings: servings.trim() || undefined,
+          additionalInstructions: additionalInstructions.trim() || undefined,
+        },
       });
 
       if (fnError) {
@@ -146,7 +154,7 @@ const Recipes = () => {
 
         {/* Search */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-4">
             <div className="flex gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -171,6 +179,36 @@ const Recipes = () => {
                   </>
                 )}
               </Button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="servings" className="text-xs text-muted-foreground">No. of Servings (optional)</Label>
+                <div className="relative">
+                  <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="servings"
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 4"
+                    value={servings}
+                    onChange={(e) => setServings(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && !isLoading && handleGenerateRecipe()}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="additional_instructions" className="text-xs text-muted-foreground">Additional Instructions (optional)</Label>
+                <Textarea
+                  id="additional_instructions"
+                  placeholder="e.g. no onion-garlic, less spicy, high protein, use an air fryer..."
+                  value={additionalInstructions}
+                  onChange={(e) => setAdditionalInstructions(e.target.value)}
+                  rows={1}
+                  className="min-h-9 resize-none"
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
