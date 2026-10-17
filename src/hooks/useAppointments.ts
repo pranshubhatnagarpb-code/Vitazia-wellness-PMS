@@ -22,14 +22,14 @@ export const useAllAppointments = () => {
       const { data, error } = await supabase
         .from('appointments')
         .select(`
-          id, appointment_date, appointment_time, appointment_type, status, notes, created_at,
+          id, client_id, appointment_date, appointment_time, appointment_type, status, notes, created_at,
           clients ( id, name, phone )
         `)
         .order('appointment_date', { ascending: false })
         .order('appointment_time', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as Appointment[];
     },
   });
 };
@@ -60,6 +60,41 @@ export const useCreateAppointment = () => {
     },
     onError: (error) => {
       toast.error('Failed to create appointment', { description: error.message });
+    },
+  });
+};
+
+export const useUpdateAppointment = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...updates
+    }: {
+      id: string;
+      client_id: string;
+      appointment_date: string;
+      appointment_time: string;
+      appointment_type: string;
+      notes?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success('Appointment updated');
+    },
+    onError: (error) => {
+      toast.error('Failed to update appointment', { description: error.message });
     },
   });
 };

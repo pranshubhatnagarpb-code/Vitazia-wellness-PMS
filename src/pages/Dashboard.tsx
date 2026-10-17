@@ -12,7 +12,7 @@ import {
 } from '@/hooks/useDashboardData';
 import { useTodaysBirthdays } from '@/hooks/useClients';
 import { Home, ChevronRight, Users, TrendingUp } from 'lucide-react';
-import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
+import { AppointmentFormDialog } from '@/components/appointments/AppointmentFormDialog';
 import { StatusDot } from '@/components/ui/StatusDot';
 
 const Dashboard = () => {
@@ -153,7 +153,7 @@ const Dashboard = () => {
         <InfoCard
           title="Today's Appointments"
           tooltip="Scheduled appointments for today"
-          customAction={<CreateAppointmentDialog />}
+          customAction={<AppointmentFormDialog />}
         >
           {appointments.length === 0 ? (
             <p className="text-muted-foreground text-sm text-center py-6">

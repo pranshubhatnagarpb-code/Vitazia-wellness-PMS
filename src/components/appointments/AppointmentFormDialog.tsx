@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { format } from 'date-fns';
+import { useEffect, useState } from 'react';
+import { format, parseISO } from 'date-fns';
 import { CalendarIcon, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -11,13 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useActiveClients } from '@/hooks/useClients';
-import { useCreateAppointment } from '@/hooks/useAppointments';
+import { useCreateAppointment, useUpdateAppointment, type Appointment } from '@/hooks/useAppointments';
 
 interface Props {
   trigger?: React.ReactNode;
+  appointment?: Appointment;
 }
 
-export const CreateAppointmentDialog = ({ trigger }: Props) => {
+export const AppointmentFormDialog = ({ trigger, appointment }: Props) => {
+  const isEdit = !!appointment;
   const [open, setOpen] = useState(false);
   const [clientId, setClientId] = useState('');
   const [date, setDate] = useState<Date>();
@@ -27,29 +29,47 @@ export const CreateAppointmentDialog = ({ trigger }: Props) => {
 
   const { data: clients = [] } = useActiveClients();
   const createAppointment = useCreateAppointment();
+  const updateAppointment = useUpdateAppointment();
+  const isPending = createAppointment.isPending || updateAppointment.isPending;
+
+  // Re-sync form fields whenever the dialog opens, for both the create
+  // case (blank form) and edit case (prefilled from the appointment).
+  useEffect(() => {
+    if (!open) return;
+    if (appointment) {
+      setClientId(appointment.client_id);
+      setDate(parseISO(appointment.appointment_date));
+      setTime(appointment.appointment_time?.slice(0, 5) || '10:00');
+      setType(appointment.appointment_type);
+      setNotes(appointment.notes || '');
+    } else {
+      setClientId('');
+      setDate(undefined);
+      setTime('10:00');
+      setType('consultation');
+      setNotes('');
+    }
+  }, [open, appointment]);
 
   const handleSubmit = () => {
     if (!clientId || !date || !time) return;
 
-    createAppointment.mutate(
-      {
-        client_id: clientId,
-        appointment_date: format(date, 'yyyy-MM-dd'),
-        appointment_time: time,
-        appointment_type: type,
-        notes: notes || undefined,
-      },
-      {
-        onSuccess: () => {
-          setOpen(false);
-          setClientId('');
-          setDate(undefined);
-          setTime('10:00');
-          setType('consultation');
-          setNotes('');
-        },
-      }
-    );
+    const payload = {
+      client_id: clientId,
+      appointment_date: format(date, 'yyyy-MM-dd'),
+      appointment_time: time,
+      appointment_type: type,
+      notes: notes || undefined,
+    };
+
+    if (isEdit) {
+      updateAppointment.mutate(
+        { id: appointment.id, ...payload },
+        { onSuccess: () => setOpen(false) }
+      );
+    } else {
+      createAppointment.mutate(payload, { onSuccess: () => setOpen(false) });
+    }
   };
 
   return (
@@ -63,7 +83,7 @@ export const CreateAppointmentDialog = ({ trigger }: Props) => {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Appointment</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit / Reschedule Appointment' : 'Create Appointment'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-2">
           {/* Client */}
@@ -136,8 +156,8 @@ export const CreateAppointmentDialog = ({ trigger }: Props) => {
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional notes..." rows={2} />
           </div>
 
-          <Button className="w-full" onClick={handleSubmit} disabled={!clientId || !date || !time || createAppointment.isPending}>
-            {createAppointment.isPending ? 'Creating...' : 'Create Appointment'}
+          <Button className="w-full" onClick={handleSubmit} disabled={!clientId || !date || !time || isPending}>
+            {isPending ? (isEdit ? 'Saving...' : 'Creating...') : isEdit ? 'Save Changes' : 'Create Appointment'}
           </Button>
         </div>
       </DialogContent>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { CreateAppointmentDialog } from '@/components/appointments/CreateAppointmentDialog';
+import { AppointmentFormDialog } from '@/components/appointments/AppointmentFormDialog';
 import { useAllAppointments, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
 import { useClients } from '@/hooks/useClients';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Home, ChevronRight, CalendarDays, CheckCircle2, XCircle } from 'lucide-react';
+import { Home, ChevronRight, CalendarDays, CheckCircle2, XCircle, Pencil } from 'lucide-react';
 import { format, isToday, isFuture, isPast, parseISO } from 'date-fns';
 
 const statusColors: Record<string, string> = {
@@ -101,6 +101,14 @@ const Appointments = () => {
                         </Button>
                       </>
                     )}
+                    <AppointmentFormDialog
+                      appointment={apt}
+                      trigger={
+                        <Button size="sm" variant="outline">
+                          <Pencil className="h-4 w-4 mr-1" /> Edit
+                        </Button>
+                      }
+                    />
                   </TableCell>
                 )}
               </TableRow>
@@ -124,7 +132,7 @@ const Appointments = () => {
           <CalendarDays className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Appointments</h1>
         </div>
-        <CreateAppointmentDialog />
+        <AppointmentFormDialog />
       </div>
 
       {/* Filter Bar */}
