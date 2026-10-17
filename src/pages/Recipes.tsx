@@ -75,14 +75,14 @@ const Recipes = () => {
 
   const handleDownloadPDF = async () => {
     if (!recipe) return;
-    
+
+    const toastId = toast.loading("Generating PDF...");
+
     try {
-      toast.loading("Generating PDF...");
-      
       // Create a temporary div to render the recipe content
       const element = document.getElementById('recipe-content');
       if (!element) {
-        toast.error("Recipe content not found");
+        toast.error("Recipe content not found", { id: toastId });
         return;
       }
       
@@ -125,10 +125,10 @@ const Recipes = () => {
       const fileName = `${recipe.dishName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_recipe.pdf`;
       pdf.save(fileName);
       
-      toast.success("PDF downloaded successfully!");
+      toast.success("PDF downloaded successfully!", { id: toastId });
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.error("Failed to generate PDF");
+      toast.error("Failed to generate PDF", { id: toastId });
     }
   };
 
