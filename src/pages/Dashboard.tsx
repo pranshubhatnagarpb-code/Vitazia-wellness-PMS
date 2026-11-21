@@ -2,8 +2,10 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { InfoCard } from '@/components/dashboard/InfoCard';
 import { DataTable } from '@/components/dashboard/DataTable';
+import { Sparkline } from '@/components/dashboard/Sparkline';
 import {
   useDashboardStats,
+  useDashboardTrends,
   useTodaysAppointments,
   useUpcomingReceivables,
   useBalanceReceivables,
@@ -11,12 +13,13 @@ import {
   useAtRiskClients,
 } from '@/hooks/useDashboardData';
 import { useTodaysBirthdays } from '@/hooks/useClients';
-import { Home, ChevronRight, Users, TrendingUp } from 'lucide-react';
+import { Home, ChevronRight, Users, TrendingUp, CalendarClock, ClipboardList } from 'lucide-react';
 import { AppointmentFormDialog } from '@/components/appointments/AppointmentFormDialog';
 import { StatusDot } from '@/components/ui/StatusDot';
 
 const Dashboard = () => {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: trends } = useDashboardTrends();
   const { data: appointments = [] } = useTodaysAppointments();
   const { data: birthdays = [] } = useTodaysBirthdays();
   const { data: balanceReceivables = [] } = useBalanceReceivables();
@@ -129,6 +132,28 @@ const Dashboard = () => {
           icon={<TrendingUp className="h-5 w-5" />}
           iconColor="bg-emerald-50 text-emerald-600"
         />
+        <StatCard
+          title="Today's Session"
+          value={trends ? String(trends.todaysSessionsCount) : String(appointments.length)}
+          tooltip="Appointments today, with the daily count for every day over the last month"
+          icon={<CalendarClock className="h-5 w-5" />}
+          iconColor="bg-blue-50 text-blue-600"
+        >
+          {trends?.todaysSessionsTrend && (
+            <Sparkline data={trends.todaysSessionsTrend} labels={trends.todaysSessionsLabels} color="#2563eb" />
+          )}
+        </StatCard>
+        <StatCard
+          title="Pending Plans"
+          value={trends ? String(trends.pendingPlansCount) : String(atRiskClients.length)}
+          tooltip="Active clients whose diet plan ends in the next 1-2 days, with how many end on each day over the next month"
+          icon={<ClipboardList className="h-5 w-5" />}
+          iconColor="bg-amber-50 text-amber-600"
+        >
+          {trends?.pendingPlansTrend && (
+            <Sparkline data={trends.pendingPlansTrend} labels={trends.pendingPlansLabels} color="#d97706" />
+          )}
+        </StatCard>
       </div>
 
       {/* Info Cards Row */}
@@ -171,12 +196,12 @@ const Dashboard = () => {
         </InfoCard>
 
         <InfoCard
-          title="At-Risk Clients"
+          title="Pending List"
           tooltip="Clients with diet plans expiring in 1-2 days (red or yellow status)"
         >
           {atRiskClients.length === 0 ? (
             <p className="text-muted-foreground text-sm text-center py-6">
-              No at-risk clients
+              Nothing pending
             </p>
           ) : (
             <ul className="space-y-2">

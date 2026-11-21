@@ -9,12 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Sparkles, Download, Loader2, Pencil, Check, X, CheckCircle2, Plus, Trash2, Save, CalendarIcon, BookTemplate, RefreshCw, Copy, Calendar as CalendarDays, Hash, Clock } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Sparkles, Download, Loader2, Pencil, Check, X, CheckCircle2, Plus, Trash2, Save, CalendarIcon, BookTemplate, RefreshCw, Copy, Calendar as CalendarDays, Hash, Clock, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { fetchAffiliateProductsForPlan } from '@/lib/dietPlanPdf';
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { Client } from '@/hooks/useClients';
+import { cn } from '@/lib/utils';
 import { useDietChartTemplates, useCreateTemplate, type DietChartTemplate, type TemplateDay, type TemplateMeal } from '@/hooks/useDietChartTemplates';
 import { format, addDays, startOfWeek } from 'date-fns';
 
@@ -90,9 +93,11 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
   const [hasGeneratedPlan, setHasGeneratedPlan] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true); // Add loading state for restoration
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [clientPopoverOpen, setClientPopoverOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [numberOfDays, setNumberOfDays] = useState('7');
+  const [groupDays, setGroupDays] = useState(true);
   
   // Debug wrapper for setNumberOfDays to track all calls
   const debugSetNumberOfDays = (value: string) => {
@@ -707,6 +712,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
           numberOfDays: parseInt(numberOfDays),
           startDate: startDateString,
           clientId: selectedClientId,
+          groupDays,
         },
       });
 
@@ -2184,20 +2190,46 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Select Client *</Label>
-              <Select value={selectedClientId} onValueChange={handleClientSelect}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a client" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
-                  {clients.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-muted-foreground">No clients yet. Add clients first.</div>
-                  ) : (
-                    clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>{client.name}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <Popover open={clientPopoverOpen} onOpenChange={setClientPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={clientPopoverOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    <span className={cn(!selectedClient && 'text-muted-foreground')}>
+                      {selectedClient ? selectedClient.name : 'Choose a client'}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-popover z-50">
+                  <Command>
+                    <CommandInput placeholder="Search clients..." />
+                    <CommandList>
+                      <CommandEmpty>
+                        {clients.length === 0 ? 'No clients yet. Add clients first.' : 'No clients found.'}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {clients.map((client) => (
+                          <CommandItem
+                            key={client.id}
+                            value={client.name}
+                            onSelect={() => {
+                              handleClientSelect(client.id);
+                              setClientPopoverOpen(false);
+                            }}
+                          >
+                            <Check className={cn('mr-2 h-4 w-4', selectedClientId === client.id ? 'opacity-100' : 'opacity-0')} />
+                            {client.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
@@ -2215,8 +2247,20 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {parseInt(numberOfDays) >= 4 ? 'Days will be paired: Mon-Thu, Tue-Fri, Wed-Sat' : 'Each day will have unique meals'}
+                {groupDays
+                  ? (parseInt(numberOfDays) >= 4 ? 'Days will be paired: Mon-Thu, Tue-Fri, Wed-Sat' : 'Each day will have unique meals')
+                  : 'Every day will have its own unique meals, no pairing'}
               </p>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label htmlFor="group-days-toggle">Group Similar Days</Label>
+                <p className="text-xs text-muted-foreground">
+                  When on, days like Mon &amp; Thu share the same meals. Turn off for a unique plan every day.
+                </p>
+              </div>
+              <Switch id="group-days-toggle" checked={groupDays} onCheckedChange={setGroupDays} />
             </div>
 
             <div className="space-y-2">

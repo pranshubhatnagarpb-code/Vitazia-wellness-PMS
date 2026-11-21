@@ -19,24 +19,33 @@ interface ClientDetails {
   dietPreference: 'vegetarian' | 'non-vegetarian' | 'both';
 }
 
-const getDayGroupings = (numberOfDays: number, startDate: string) => {
+const getDayGroupings = (numberOfDays: number, startDate: string, groupDays: boolean = true) => {
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const start = new Date(startDate);
   const dayGroups: Array<{ dayName: string; date: string; fullDate: string }> = [];
-  
+
   for (let i = 0; i < numberOfDays; i++) {
     const currentDate = new Date(start);
     currentDate.setDate(start.getDate() + i);
     const dayName = days[currentDate.getDay()];
     const dateStr = currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    
+
     dayGroups.push({
       dayName,
       date: dateStr,
       fullDate: currentDate.toISOString().split('T')[0]
     });
   }
-  
+
+  if (!groupDays) {
+    // One group per calendar day, each getting its own unique meals.
+    return dayGroups.map((d) => ({
+      label: `${d.dayName} (${d.date})`,
+      dates: d.date,
+      days: [d],
+    }));
+  }
+
   // Pair days for common diet plans
   const pairedGroups: Array<{ label: string; dates: string; days: typeof dayGroups }> = [];
   const used = new Set<number>();
@@ -88,7 +97,7 @@ serve(async (req) => {
   }
 
   try {
-    const { clientDetails, customPrompt, numberOfDays = 7, startDate, clientId }: { clientDetails: ClientDetails; customPrompt?: string; numberOfDays?: number; startDate?: string; clientId?: string } = await req.json();
+    const { clientDetails, customPrompt, numberOfDays = 7, startDate, clientId, groupDays = true }: { clientDetails: ClientDetails; customPrompt?: string; numberOfDays?: number; startDate?: string; clientId?: string; groupDays?: boolean } = await req.json();
 
     if (clientId) {
       const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -136,7 +145,7 @@ serve(async (req) => {
     }[clientDetails.goal];
 
     const effectiveStartDate = startDate || new Date().toISOString().split('T')[0];
-    const dayGroups = getDayGroupings(numberOfDays, effectiveStartDate);
+    const dayGroups = getDayGroupings(numberOfDays, effectiveStartDate, groupDays);
     const groupDescriptions = dayGroups.map((g, i) => `- Group ${i + 1}: ${g.label} (${g.dates})`).join('\n');
     const groupJsonExamples = dayGroups.map((g, i) => {
       return `    {
