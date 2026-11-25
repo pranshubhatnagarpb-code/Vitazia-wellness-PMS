@@ -81,7 +81,7 @@ interface DietPlan {
 
 interface Props {
   clients: Client[];
-  editModeData?: { id: string; data: DietPlan & { clientId?: string }; source: 'draft' | 'reuse' | 'template'; clientId?: string } | null;
+  editModeData?: { id: string; data: DietPlan & { clientId?: string }; source: 'draft' | 'reuse' | 'template' | 'edit'; clientId?: string } | null;
   onClose?: () => void;
 }
 
@@ -118,7 +118,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [showDraftOptions, setShowDraftOptions] = useState(false);
-  const [editSource, setEditSource] = useState<'draft' | 'reuse' | 'template' | 'new' | null>(null);
+  const [editSource, setEditSource] = useState<'draft' | 'reuse' | 'template' | 'new' | 'edit' | null>(null);
   const [originalPlanData, setOriginalPlanData] = useState<DietPlan | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(new Date());
   const [showStartCalendar, setShowStartCalendar] = useState(false);
@@ -334,9 +334,20 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
     return labels;
   };
 
+  // The week number actually used for naming/saving: whatever the staff
+  // typed into the "Week Number" field, falling back to the auto-calculated
+  // next number only when that field is empty/invalid. Previously the save
+  // calls and getDietChartLabel() used nextDietChartNumber directly and
+  // ignored editableWeekNumber entirely, so editing the week number before
+  // saving had no effect on the saved plan name/number.
+  const getEffectiveWeekNumber = () => {
+    const parsed = parseInt(editableWeekNumber, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : nextDietChartNumber;
+  };
+
   // Generate diet chart label - simplified format
   const getDietChartLabel = () => {
-    return `Diet Chart ${nextDietChartNumber}`;
+    return `Diet Chart ${getEffectiveWeekNumber()}`;
   };
 
   // Generate full plan name with custom title if provided
@@ -767,7 +778,10 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
 
     return {
       planName: template.name,
-      introMessage: template.description || '',
+      // Deliberately not template.description here — that field holds the
+      // template's own metadata (e.g. "Imported from ... (tab: ...)"),
+      // which isn't something a client should see on their diet plan.
+      introMessage: '',
       affirmations: [],
       dayGroups,
       servingSize: '',
@@ -870,7 +884,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
         instructions: generatedPlan.introMessage,
         status: 'approved',
         is_ai_generated: true,
-        week_number: nextDietChartNumber, // Keep for numbering but not display
+        week_number: getEffectiveWeekNumber(), // Keep for numbering but not display
         custom_title: customTitle.trim() || null,
         ai_plan_data: updatedPlanData as any,
         start_date: finalStartDate,
@@ -1153,7 +1167,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
         .from('diet_plans')
         .insert({
           client_id: selectedClient.id,
-          week_number: nextDietChartNumber,
+          week_number: getEffectiveWeekNumber(),
           plan_name: `${getFullPlanName()} (Draft)`,
           custom_title: customTitle.trim() || null,
           ai_plan_data: updatedPlanData as any,
@@ -1296,7 +1310,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
         .from('diet_plans')
         .insert({
           client_id: selectedClient.id,
-          week_number: nextDietChartNumber,
+          week_number: getEffectiveWeekNumber(),
           plan_name: getFullPlanName(),
           custom_title: customTitle.trim() || null,
           ai_plan_data: updatedPlanData as any,
@@ -1305,12 +1319,12 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
           created_at: new Date().toISOString(),
           start_date: finalStartDate,
         });
-      
+
       if (error) {
         console.error('Database insert error:', error);
         throw error;
       }
-      
+
       toast.success(`Reused plan saved as ${getFullPlanName()}!`);
       resetEditMode();
     } catch (error: any) {
@@ -1404,6 +1418,46 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
     } catch (error: any) {
       console.error('Error updating plan:', error);
       toast.error('Failed to update plan');
+    }
+  };
+
+  // Save changes to an already-approved plan in place — unlike "Edit & Reuse"
+  // (saveReusedPlan), this updates the existing row rather than inserting a
+  // new one, and unlike updateEditedPlan (drafts) it also keeps plan_name /
+  // custom_title / week_number / start_date in sync with whatever was edited.
+  const updateExistingPlan = async () => {
+    if (!generatedPlan || !editingPlanId || !selectedClient) return;
+
+    try {
+      const finalStartDate = editableStartDate || getLowestDateFromPlan(generatedPlan) || startDate?.toISOString().split('T')[0] || generatedPlan.startDate;
+
+      const updatedPlanData = {
+        ...generatedPlan,
+        startDate: finalStartDate,
+        editableStartDate: editableStartDate,
+        editableWeekNumber: editableWeekNumber,
+        editableDayCount: editableDayCount,
+      };
+
+      const { error } = await supabase
+        .from('diet_plans')
+        .update({
+          plan_name: getFullPlanName(),
+          week_number: getEffectiveWeekNumber(),
+          custom_title: customTitle.trim() || null,
+          ai_plan_data: updatedPlanData as any,
+          updated_at: new Date().toISOString(),
+          start_date: finalStartDate,
+        })
+        .eq('id', editingPlanId);
+
+      if (error) throw error;
+
+      toast.success('Plan updated successfully!');
+      resetEditMode();
+    } catch (error: any) {
+      console.error('Error updating plan:', error);
+      toast.error('Failed to update plan', { description: error.message });
     }
   };
 
@@ -1718,7 +1772,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
 <body>
   <div class="header">
     <img src="${logoDataUrl}" alt="Vitazia Wellness Logo" class="header-logo" />
-    <h1>${generatedPlan.planName}</h1>
+    <h1>Week ${getEffectiveWeekNumber()} plan for ${clientDetails.name}</h1>
     <p>Personalized Diet Plan for ${clientDetails.name}
       <span class="week-badge">${getFullPlanName()}</span>
     </p>
@@ -1737,7 +1791,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
       <div><span>Goal:</span> ${clientDetails.goal || 'Not specified'}</div>
       <div><span>Diet Preference:</span> ${clientDetails.dietPreference || 'Not specified'}</div>
       <div><span>Date:</span> ${getDateRange()}</div>
-      <div><span>Week:</span> Week ${editableWeekNumber || nextDietChartNumber}</div>
+      <div><span>Week:</span> Week ${getEffectiveWeekNumber()}</div>
       <div><span>Duration:</span> ${editableDayCount || '7'} days</div>
     </div>
     ${clientDetails.healthConditions.length > 0 ? `
@@ -2531,6 +2585,11 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
                         Editing Draft
                       </Badge>
                     )}
+                    {editSource === 'edit' && (
+                      <Badge variant="outline" className="border-amber-500 text-amber-600">
+                        Editing Plan
+                      </Badge>
+                    )}
                     {editSource === 'reuse' && (
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="border-green-500 text-green-600">
@@ -2681,7 +2740,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
                     <div>
                       <span className="font-medium text-green-700 dark:text-green-300">Week:</span>
                       <span className="ml-1 text-gray-700 dark:text-gray-300">
-                        Week {editableWeekNumber || nextDietChartNumber}
+                        Week {getEffectiveWeekNumber()}
                       </span>
                     </div>
                   </div>
@@ -3409,6 +3468,13 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
                       <Button onClick={approveDraft} className="gradient-primary text-primary-foreground">
                         <CheckCircle2 className="h-4 w-4 mr-2" />
                         Approve as {getFullPlanName()}
+                      </Button>
+                    </>
+                  ) : editSource === 'edit' ? (
+                    <>
+                      <Button onClick={updateExistingPlan} className="gradient-primary text-primary-foreground">
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
                       </Button>
                     </>
                   ) : editSource === 'reuse' ? (

@@ -203,6 +203,16 @@ function escapeHtml(str: string): string {
   return str.replace(/\n/g, '<br/>');
 }
 
+// Plans created from an imported Excel template used to carry the
+// template's own "Imported from ... (tab: ...)" metadata note straight into
+// introMessage, which then showed up on the client-facing PDF. New plans no
+// longer get this (see convertTemplateToDietPlan), but plans saved before
+// that fix still have it stored — so it's filtered out here at render time
+// rather than requiring a database migration to clean up old rows.
+function isImportProvenanceNote(message: string): boolean {
+  return /^imported from ["']/i.test(message.trim());
+}
+
 // ---------------------------------------------------------------------------
 // HTML builder — shared by both download and auto-publish PDF flows
 // ---------------------------------------------------------------------------
@@ -275,7 +285,7 @@ export function buildDietPlanHtml(
 </head>
 <body>
   <div class="header">
-    <h1>${aiData.planName}</h1>
+    <h1>Week ${plan.week_number || '--'} plan for ${clientDetails.name}</h1>
     <p>Personalized Diet Plan for ${clientDetails.name}
       <span class="week-badge">Week ${plan.week_number || '--'}</span>
     </p>
@@ -305,9 +315,10 @@ export function buildDietPlanHtml(
     </div>` : ''}
   </div>
 
+  ${aiData.introMessage && !isImportProvenanceNote(aiData.introMessage) ? `
   <div class="intro">
-    <p>${escapeHtml(aiData.introMessage || '')}</p>
-  </div>
+    <p>${escapeHtml(aiData.introMessage)}</p>
+  </div>` : ''}
 
   ${(aiData.affirmations?.length ?? 0) > 0 ? `
   <div class="affirmations">
@@ -511,7 +522,7 @@ export function buildDietPlanHtml(
 function buildRichAIPlanHtml(
   aiData: any,
   client: any,
-  planMeta: { planName: string; weekLabel: string; dateRange: string; duration: string },
+  planMeta: { planName: string; weekLabel: string; weekNumber: number | string; dateRange: string; duration: string },
   recipes: Array<{ Meal_name: string; Ingredients: string; Instructions: string; Remarks: string }>,
   affiliateProducts: Array<{ product_name: string; link: string }>,
   logoDataUrl: string,
@@ -645,7 +656,7 @@ function buildRichAIPlanHtml(
 <body>
   <div class="header">
     ${logoDataUrl ? `<img src="${logoDataUrl}" alt="Vitazia Wellness Logo"/>` : ''}
-    <h1>${aiData.planName ?? planMeta.planName}</h1>
+    <h1>Week ${planMeta.weekNumber ?? '--'} plan for ${client?.name ?? 'Client'}</h1>
     <p>Personalized Diet Plan for ${client?.name ?? 'Client'}
       <span class="week-badge">${planMeta.weekLabel}</span>
     </p>
@@ -673,7 +684,7 @@ function buildRichAIPlanHtml(
     ${client?.notes ? `<div style="margin-top:10px;font-size:10px"><strong>Notes:</strong> ${client.notes}</div>` : ''}
   </div>
 
-  ${aiData.introMessage ? `<div class="intro"><p>${esc(aiData.introMessage)}</p></div>` : ''}
+  ${aiData.introMessage && !isImportProvenanceNote(aiData.introMessage) ? `<div class="intro"><p>${esc(aiData.introMessage)}</p></div>` : ''}
 
   ${(aiData.affirmations?.length ?? 0) > 0 ? `
   <div class="affirmations">
@@ -784,6 +795,7 @@ export async function openDietPlanForPrint(plan: any): Promise<void> {
   const planMeta = {
     planName: aiData.planName ?? plan.plan_name ?? 'Diet Plan',
     weekLabel: plan.plan_name ?? aiData.planName ?? 'Diet Plan',
+    weekNumber: plan.week_number ?? '--',
     dateRange,
     duration: String(dayCount),
   };

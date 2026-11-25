@@ -562,7 +562,7 @@ export const ClientFormDialog = ({ open, onOpenChange, client, onSubmit, isLoadi
                     <SelectValue placeholder="Select number" />
                   </SelectTrigger>
                   <SelectContent>
-                    {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24].map(n => (
+                    {[1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 36, 48].map(n => (
                       <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? 'chart' : 'charts'}</SelectItem>
                     ))}
                   </SelectContent>
