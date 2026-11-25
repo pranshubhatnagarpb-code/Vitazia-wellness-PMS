@@ -6,10 +6,24 @@ import { useClients } from '@/hooks/useClients';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Home, ChevronRight, CalendarDays, CheckCircle2, XCircle, Pencil } from 'lucide-react';
-import { format, isToday, isFuture, isPast, parseISO } from 'date-fns';
+import {
+  Home,
+  ChevronRight,
+  CalendarDays,
+  CheckCircle2,
+  XCircle,
+  Pencil,
+  Ban,
+  CalendarClock,
+  CalendarIcon,
+  X,
+} from 'lucide-react';
+import { format, isToday, isFuture, isPast, parseISO, isSameDay } from 'date-fns';
 
 const statusColors: Record<string, string> = {
   scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
@@ -25,25 +39,42 @@ const Appointments = () => {
   const [tab, setTab] = useState('upcoming');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<Date>();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const upcoming = appointments.filter((a) => {
-    const d = parseISO(a.appointment_date);
-    const matchesDate = (isFuture(d) || isToday(d)) && a.status === 'scheduled';
+  const matchesCommon = (a: (typeof appointments)[number]) => {
     const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
     const matchesClient = clientFilter === 'all' || a.clients?.id === clientFilter;
-    return matchesDate && matchesStatus && matchesClient;
-  });
+    return matchesStatus && matchesClient;
+  };
 
-  const past = appointments.filter((a) => {
+  const byDate = dateFilter
+    ? appointments.filter((a) => isSameDay(parseISO(a.appointment_date), dateFilter) && matchesCommon(a))
+    : [];
+
+  // An appointment counts as "upcoming" only while it's still scheduled and
+  // due today or later. The moment it's cancelled / marked no-show / done —
+  // or its date simply passes while still scheduled — it moves to Past, so
+  // a cancellation is never left invisible in a date-shaped limbo bucket.
+  const isUpcoming = (a: (typeof appointments)[number]) => {
     const d = parseISO(a.appointment_date);
-    const matchesDate = isPast(d) && !isToday(d);
-    const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
-    const matchesClient = clientFilter === 'all' || a.clients?.id === clientFilter;
-    return matchesDate && matchesStatus && matchesClient;
-  });
+    return a.status === 'scheduled' && (isFuture(d) || isToday(d));
+  };
+
+  const upcoming = appointments.filter((a) => isUpcoming(a) && matchesCommon(a));
+  const past = appointments.filter((a) => !isUpcoming(a) && matchesCommon(a));
+
+  // How many times each client has had an appointment cancelled, computed
+  // from the full (unfiltered) list so the count stays accurate regardless
+  // of whatever status/client/date filter is currently applied on screen.
+  const cancelCountsByClient = appointments.reduce<Record<string, number>>((counts, a) => {
+    if (a.status === 'cancelled') {
+      counts[a.client_id] = (counts[a.client_id] || 0) + 1;
+    }
+    return counts;
+  }, {});
 
   const renderTable = (list: typeof appointments, showActions: boolean) => (
     <div className="rounded-lg border bg-card">
@@ -73,13 +104,20 @@ const Appointments = () => {
                 <TableCell>{apt.appointment_time?.slice(0, 5)}</TableCell>
                 <TableCell className="capitalize">{apt.appointment_type.replace('_', ' ')}</TableCell>
                 <TableCell>
-                  <Badge variant="secondary" className={statusColors[apt.status] || ''}>
-                    {apt.status.replace('_', ' ')}
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="secondary" className={statusColors[apt.status] || ''}>
+                      {apt.status.replace('_', ' ')}
+                    </Badge>
+                    {apt.status === 'cancelled' && cancelCountsByClient[apt.client_id] > 1 && (
+                      <span className="text-xs text-muted-foreground">
+                        ({cancelCountsByClient[apt.client_id]} total)
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
                 {showActions && (
                   <TableCell className="text-right space-x-2">
-                    {apt.status === 'scheduled' && (
+                    {apt.status === 'scheduled' ? (
                       <>
                         <Button
                           size="sm"
@@ -99,16 +137,34 @@ const Appointments = () => {
                         >
                           <XCircle className="h-4 w-4 mr-1" /> No Show
                         </Button>
-                      </>
-                    )}
-                    <AppointmentFormDialog
-                      appointment={apt}
-                      trigger={
-                        <Button size="sm" variant="outline">
-                          <Pencil className="h-4 w-4 mr-1" /> Edit
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() => updateStatus.mutate({ id: apt.id, status: 'cancelled' })}
+                          disabled={updateStatus.isPending}
+                        >
+                          <Ban className="h-4 w-4 mr-1" /> Cancel
                         </Button>
-                      }
-                    />
+                        <AppointmentFormDialog
+                          appointment={apt}
+                          trigger={
+                            <Button size="sm" variant="outline">
+                              <CalendarClock className="h-4 w-4 mr-1" /> Reschedule
+                            </Button>
+                          }
+                        />
+                      </>
+                    ) : (
+                      <AppointmentFormDialog
+                        appointment={apt}
+                        trigger={
+                          <Button size="sm" variant="outline">
+                            <Pencil className="h-4 w-4 mr-1" /> Edit
+                          </Button>
+                        }
+                      />
+                    )}
                   </TableCell>
                 )}
               </TableRow>
@@ -168,16 +224,55 @@ const Appointments = () => {
             </SelectContent>
           </Select>
         </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Date Filter:</span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn('w-44 justify-start text-left font-normal', !dateFilter && 'text-muted-foreground')}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateFilter ? format(dateFilter, 'dd MMM yyyy') : 'Pick a day'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar mode="single" selected={dateFilter} onSelect={setDateFilter} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+          {dateFilter && (
+            <Button variant="ghost" size="sm" onClick={() => setDateFilter(undefined)}>
+              <X className="h-4 w-4 mr-1" /> Clear
+            </Button>
+          )}
+        </div>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="upcoming">Upcoming ({upcoming.length})</TabsTrigger>
-          <TabsTrigger value="past">Past ({past.length})</TabsTrigger>
-        </TabsList>
-        <TabsContent value="upcoming">{renderTable(upcoming, true)}</TabsContent>
-        <TabsContent value="past">{renderTable(past, true)}</TabsContent>
-      </Tabs>
+      {clientFilter !== 'all' && (
+        <p className="text-sm text-muted-foreground mb-4">
+          {clients.find((c) => c.id === clientFilter)?.name || 'This client'} has cancelled{' '}
+          <span className="font-medium text-foreground">{cancelCountsByClient[clientFilter] || 0}</span>{' '}
+          appointment{(cancelCountsByClient[clientFilter] || 0) === 1 ? '' : 's'}.
+        </p>
+      )}
+
+      {dateFilter ? (
+        <div>
+          <p className="text-sm text-muted-foreground mb-3">
+            Showing {byDate.length} appointment{byDate.length === 1 ? '' : 's'} on {format(dateFilter, 'dd MMM yyyy')}
+          </p>
+          {renderTable(byDate, true)}
+        </div>
+      ) : (
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList>
+            <TabsTrigger value="upcoming">Upcoming ({upcoming.length})</TabsTrigger>
+            <TabsTrigger value="past">Past ({past.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="upcoming">{renderTable(upcoming, true)}</TabsContent>
+          <TabsContent value="past">{renderTable(past, true)}</TabsContent>
+        </Tabs>
+      )}
     </DashboardLayout>
   );
 };
