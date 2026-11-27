@@ -25,6 +25,7 @@ type Row = {
   Ingredients: string;
   Instructions: string;
   Remarks: string;
+  Calories: string;
   meal_name_normalized: string;
   status: 'valid' | 'invalid' | 'duplicate-in-file';
   error?: string;
@@ -36,6 +37,7 @@ type Recipe = {
   Ingredients: string;
   Instructions: string;
   Remarks: string;
+  Calories: number | null;
   meal_name_normalized: string;
   created_at: string;
 };
@@ -73,6 +75,7 @@ const MealRecipesImport = () => {
   const [editIngredients, setEditIngredients] = useState('');
   const [editInstructions, setEditInstructions] = useState('');
   const [editRemarks, setEditRemarks] = useState('');
+  const [editCalories, setEditCalories] = useState('');
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -104,19 +107,20 @@ const MealRecipesImport = () => {
       const Ingredients = getCell(r, ['Ingredients', 'ingredients']);
       const Instructions = getCell(r, ['Instructions', 'instructions', 'recipe_text', 'Recipe Text', 'RecipeText']);
       const Remarks = getCell(r, ['Remarks', 'remarks']);
+      const Calories = getCell(r, ['Calories', 'calories', 'kcal', 'Kcal', 'Cal', 'cal']);
       const norm = normalize(Meal_name);
 
       if (!Meal_name || !Instructions) {
-        return { Meal_name, Ingredients, Instructions, Remarks, meal_name_normalized: norm, status: 'invalid', error: 'Missing Meal_name or Instructions' };
+        return { Meal_name, Ingredients, Instructions, Remarks, Calories, meal_name_normalized: norm, status: 'invalid', error: 'Missing Meal_name or Instructions' };
       }
       if (!norm) {
-        return { Meal_name, Ingredients, Instructions, Remarks, meal_name_normalized: norm, status: 'invalid', error: 'Meal_name must contain alphanumeric characters' };
+        return { Meal_name, Ingredients, Instructions, Remarks, Calories, meal_name_normalized: norm, status: 'invalid', error: 'Meal_name must contain alphanumeric characters' };
       }
       if (seen.has(norm)) {
-        return { Meal_name, Ingredients, Instructions, Remarks, meal_name_normalized: norm, status: 'duplicate-in-file' };
+        return { Meal_name, Ingredients, Instructions, Remarks, Calories, meal_name_normalized: norm, status: 'duplicate-in-file' };
       }
       seen.add(norm);
-      return { Meal_name, Ingredients, Instructions, Remarks, meal_name_normalized: norm, status: 'valid' };
+      return { Meal_name, Ingredients, Instructions, Remarks, Calories, meal_name_normalized: norm, status: 'valid' };
     });
     setRows(parsed);
     setResult(null);
@@ -175,6 +179,7 @@ const MealRecipesImport = () => {
         Ingredients: r.Ingredients,
         Instructions: r.Instructions,
         Remarks: r.Remarks,
+        Calories: r.Calories ? parseFloat(r.Calories) || null : null,
         meal_name_normalized: r.meal_name_normalized,
       }));
 
@@ -202,6 +207,7 @@ const MealRecipesImport = () => {
     setEditIngredients(r.Ingredients || '');
     setEditInstructions(r.Instructions || '');
     setEditRemarks(r.Remarks || '');
+    setEditCalories(r.Calories != null ? String(r.Calories) : '');
   };
 
   const openAdd = () => {
@@ -210,6 +216,7 @@ const MealRecipesImport = () => {
     setEditIngredients('');
     setEditInstructions('');
     setEditRemarks('');
+    setEditCalories('');
     setAddOpen(true);
   };
 
@@ -218,6 +225,7 @@ const MealRecipesImport = () => {
     const ingredients = editIngredients.trim();
     const instructions = editInstructions.trim();
     const remarks = editRemarks.trim();
+    const calories = editCalories.trim() ? parseFloat(editCalories.trim()) : null;
     if (!name || !instructions) {
       toast.error('Meal name and instructions are required');
       return;
@@ -244,14 +252,14 @@ const MealRecipesImport = () => {
       if (editing) {
         const { error } = await supabase
           .from('meal_recipes')
-          .update({ Meal_name: name, Ingredients: ingredients, Instructions: instructions, Remarks: remarks, meal_name_normalized: norm })
+          .update({ Meal_name: name, Ingredients: ingredients, Instructions: instructions, Remarks: remarks, Calories: calories, meal_name_normalized: norm })
           .eq('id', editing.id);
         if (error) throw error;
         toast.success('Recipe updated');
       } else {
         const { error } = await supabase
           .from('meal_recipes')
-          .insert({ Meal_name: name, Ingredients: ingredients, Instructions: instructions, Remarks: remarks, meal_name_normalized: norm });
+          .insert({ Meal_name: name, Ingredients: ingredients, Instructions: instructions, Remarks: remarks, Calories: calories, meal_name_normalized: norm });
         if (error) throw error;
         toast.success('Recipe added');
       }
@@ -309,7 +317,7 @@ const MealRecipesImport = () => {
           <div>
             <Label htmlFor="file">Upload CSV or Excel file</Label>
             <p className="text-sm text-muted-foreground mb-2">
-              Required columns: <code>Meal_name</code>, <code>Instructions</code>. Optional: <code>Ingredients</code>, <code>Remarks</code>. The <code>meal_name_normalized</code> field is generated automatically.
+              Required columns: <code>Meal_name</code>, <code>Instructions</code>. Optional: <code>Ingredients</code>, <code>Remarks</code>, <code>Calories</code>. The <code>meal_name_normalized</code> field is generated automatically.
             </p>
             <Input
               id="file"
@@ -357,6 +365,7 @@ const MealRecipesImport = () => {
                   <TableHead>Ingredients</TableHead>
                   <TableHead>Instructions</TableHead>
                   <TableHead>Remarks</TableHead>
+                  <TableHead>Calories</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -369,6 +378,7 @@ const MealRecipesImport = () => {
                     <TableCell className="max-w-xs truncate">{r.Ingredients || '-'}</TableCell>
                     <TableCell className="max-w-md truncate">{r.Instructions}</TableCell>
                     <TableCell className="max-w-xs truncate">{r.Remarks || '-'}</TableCell>
+                    <TableCell>{r.Calories || '-'}</TableCell>
                     <TableCell>
                       {r.status === 'valid' && <Badge variant="default">Valid</Badge>}
                       {r.status === 'duplicate-in-file' && <Badge variant="secondary">Dup in file</Badge>}
@@ -417,13 +427,14 @@ const MealRecipesImport = () => {
                 <TableHead>Ingredients</TableHead>
                 <TableHead>Instructions</TableHead>
                 <TableHead>Remarks</TableHead>
+                <TableHead>Calories</TableHead>
                 <TableHead className="w-32 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRecipes.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     {loadingRecipes ? 'Loading...' : 'No recipes found'}
                   </TableCell>
                 </TableRow>
@@ -435,6 +446,7 @@ const MealRecipesImport = () => {
                   <TableCell className="max-w-xs truncate">{r.Ingredients || '-'}</TableCell>
                   <TableCell className="max-w-md truncate">{r.Instructions}</TableCell>
                   <TableCell className="max-w-xs truncate">{r.Remarks || '-'}</TableCell>
+                  <TableCell>{r.Calories ?? '-'}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(r)} title="Edit">
                       <Pencil className="h-4 w-4" />
@@ -496,6 +508,17 @@ const MealRecipesImport = () => {
                 onChange={(e) => setEditRemarks(e.target.value)}
                 placeholder="Optional notes, substitutions, serving tips..."
                 rows={3}
+              />
+            </div>
+            <div>
+              <Label htmlFor="Calories">Calories (kcal)</Label>
+              <Input
+                id="Calories"
+                type="number"
+                min="0"
+                value={editCalories}
+                onChange={(e) => setEditCalories(e.target.value)}
+                placeholder="e.g. 250"
               />
             </div>
           </div>

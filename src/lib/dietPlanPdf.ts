@@ -16,7 +16,7 @@ function toWordSet(normalized: string): Set<string> {
 
 async function fetchRecipesForAIPlan(
   aiData: any,
-): Promise<Array<{ Meal_name: string; Ingredients: string; Instructions: string; Remarks: string }>> {
+): Promise<Array<{ Meal_name: string; Ingredients: string; Instructions: string; Remarks: string; Calories: number | null }>> {
   const raw: string[] = [];
   ((aiData.dayGroups ?? []) as any[]).forEach((dg: any) => {
     ((dg.meals ?? []) as any[]).forEach((m: any) => {
@@ -43,14 +43,14 @@ async function fetchRecipesForAIPlan(
   if (candidates.length === 0) return [];
 
   // Paginate because Supabase caps responses at 1000 rows per request
-  type RecipeRow = { Meal_name: string; Ingredients: string; Instructions: string; Remarks: string };
+  type RecipeRow = { Meal_name: string; Ingredients: string; Instructions: string; Remarks: string; Calories: number | null };
   const allData: RecipeRow[] = [];
   const batchSize = 1000;
   let from = 0;
   while (true) {
     const { data, error } = await supabase
       .from('meal_recipes')
-      .select('Meal_name, Ingredients, Instructions, Remarks')
+      .select('Meal_name, Ingredients, Instructions, Remarks, Calories')
       .range(from, from + batchSize - 1);
     if (error || !data || data.length === 0) break;
     allData.push(...(data as RecipeRow[]));
@@ -76,6 +76,7 @@ async function fetchRecipesForAIPlan(
         Ingredients: match.Ingredients || '',
         Instructions: match.Instructions || '',
         Remarks: match.Remarks || '',
+        Calories: match.Calories ?? null,
       });
     }
   });
@@ -219,7 +220,7 @@ function isImportProvenanceNote(message: string): boolean {
 
 export function buildDietPlanHtml(
   plan: any,
-  recipes: Array<{ Meal_name: string; Ingredients: string; Instructions: string; Remarks: string }> = [],
+  recipes: Array<{ Meal_name: string; Ingredients: string; Instructions: string; Remarks: string; Calories?: number | null }> = [],
   affiliateProducts: Array<{ product_name: string; link: string }> = [],
 ): string {
   const isAI = plan.is_ai_generated && plan.ai_plan_data;
@@ -424,7 +425,7 @@ export function buildDietPlanHtml(
     <h2 style="color: #5a7a32; font-size: 18px; border-bottom: 2px solid #5a7a32; padding-bottom: 6px; margin-bottom: 14px;">Recipes for mentioned meals</h2>
     ${recipes.map(r => `
       <div style="margin-bottom: 16px; page-break-inside: avoid;">
-        <h3 style="color: #1a5fb4; font-size: 13px; margin-bottom: 6px;">${r.Meal_name}</h3>
+        <h3 style="color: #1a5fb4; font-size: 13px; margin-bottom: 6px;">${r.Meal_name}${r.Calories ? ` <span style="color: #5a7a32; font-weight: normal; font-size: 11px;">(${r.Calories} kcal)</span>` : ''}</h3>
         ${r.Ingredients ? `<div style="font-size: 11px; line-height: 1.5; color: #333; margin-bottom: 6px;"><strong>Ingredients:</strong><br/><span style="white-space: pre-wrap;">${r.Ingredients}</span></div>` : ''}
         <div style="font-size: 11px; line-height: 1.5; color: #333; margin-bottom: 6px;"><strong>Instructions:</strong><br/><span style="white-space: pre-wrap;">${r.Instructions}</span></div>
         ${r.Remarks ? `<div style="font-size: 11px; line-height: 1.5; color: #555;"><strong>Remarks:</strong><br/><span style="white-space: pre-wrap;">${r.Remarks}</span></div>` : ''}
@@ -523,7 +524,7 @@ function buildRichAIPlanHtml(
   aiData: any,
   client: any,
   planMeta: { planName: string; weekLabel: string; weekNumber: number | string; dateRange: string; duration: string },
-  recipes: Array<{ Meal_name: string; Ingredients: string; Instructions: string; Remarks: string }>,
+  recipes: Array<{ Meal_name: string; Ingredients: string; Instructions: string; Remarks: string; Calories: number | null }>,
   affiliateProducts: Array<{ product_name: string; link: string }>,
   logoDataUrl: string,
 ): string {
@@ -573,7 +574,7 @@ function buildRichAIPlanHtml(
       <h2 style="color:#5a7a32;font-size:18px;border-bottom:2px solid #5a7a32;padding-bottom:6px;margin-bottom:14px">Recipes for mentioned meals</h2>
       ${recipes.map(r => `
         <div style="margin-bottom:16px;page-break-inside:avoid">
-          <h3 style="color:#1a5fb4;font-size:13px;margin-bottom:6px">${escapePlain(r.Meal_name)}</h3>
+          <h3 style="color:#1a5fb4;font-size:13px;margin-bottom:6px">${escapePlain(r.Meal_name)}${r.Calories ? ` <span style="color:#5a7a32;font-weight:normal;font-size:11px">(${r.Calories} kcal)</span>` : ''}</h3>
           ${r.Ingredients ? `<div style="font-size:11px;line-height:1.5;color:#333;margin-bottom:6px"><strong>Ingredients:</strong><br/><span style="white-space:pre-wrap">${escapePlain(r.Ingredients)}</span></div>` : ''}
           <div style="font-size:11px;line-height:1.5;color:#333;margin-bottom:6px"><strong>Instructions:</strong><br/><span style="white-space:pre-wrap">${escapePlain(r.Instructions)}</span></div>
           ${r.Remarks ? `<div style="font-size:11px;line-height:1.5;color:#555"><strong>Remarks:</strong><br/><span style="white-space:pre-wrap">${escapePlain(r.Remarks)}</span></div>` : ''}

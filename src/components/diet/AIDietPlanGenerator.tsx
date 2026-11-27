@@ -1548,19 +1548,19 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
     return result;
   };
 
-  const fetchMatchedRecipes = async (plan?: typeof generatedPlan): Promise<Array<{ Meal_name: string; Ingredients: string; Instructions: string; Remarks: string }>> => {
+  const fetchMatchedRecipes = async (plan?: typeof generatedPlan): Promise<Array<{ Meal_name: string; Ingredients: string; Instructions: string; Remarks: string; Calories: number | null }>> => {
     const candidates = extractMealCandidates(plan);
     if (candidates.length === 0) return [];
 
     // Paginate because Supabase caps responses at 1000 rows per request
-    type RecipeRow = { Meal_name: string; Ingredients: string; Instructions: string; Remarks: string };
+    type RecipeRow = { Meal_name: string; Ingredients: string; Instructions: string; Remarks: string; Calories: number | null };
     const allData: RecipeRow[] = [];
     const batchSize = 1000;
     let from = 0;
     while (true) {
       const { data, error } = await supabase
         .from('meal_recipes')
-        .select('Meal_name, Ingredients, Instructions, Remarks')
+        .select('Meal_name, Ingredients, Instructions, Remarks, Calories')
         .range(from, from + batchSize - 1);
       if (error || !data || data.length === 0) break;
       allData.push(...(data as RecipeRow[]));
@@ -1588,6 +1588,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
           Ingredients: match.Ingredients || '',
           Instructions: match.Instructions || '',
           Remarks: match.Remarks || '',
+          Calories: match.Calories ?? null,
         });
       }
     });
@@ -1896,7 +1897,7 @@ export const AIDietPlanGenerator = ({ clients, editModeData, onClose }: Props) =
     <h2 style="color: #5a7a32; font-size: 18px; border-bottom: 2px solid #5a7a32; padding-bottom: 6px; margin-bottom: 14px;">Recipes for mentioned meals</h2>
     ${recipes.map(r => `
       <div style="margin-bottom: 16px; page-break-inside: avoid;">
-        <h3 style="color: #1a5fb4; font-size: 13px; margin-bottom: 6px;">${escapePlainText(r.Meal_name)}</h3>
+        <h3 style="color: #1a5fb4; font-size: 13px; margin-bottom: 6px;">${escapePlainText(r.Meal_name)}${r.Calories ? ` <span style="color: #5a7a32; font-weight: normal; font-size: 11px;">(${r.Calories} kcal)</span>` : ''}</h3>
         ${r.Ingredients ? `<div style="font-size: 11px; line-height: 1.5; color: #333; margin-bottom: 6px;"><strong>Ingredients:</strong><br/><span style="white-space: pre-wrap;">${escapePlainText(r.Ingredients)}</span></div>` : ''}
         <div style="font-size: 11px; line-height: 1.5; color: #333; margin-bottom: 6px;"><strong>Instructions:</strong><br/><span style="white-space: pre-wrap;">${escapePlainText(r.Instructions)}</span></div>
         ${r.Remarks ? `<div style="font-size: 11px; line-height: 1.5; color: #555;"><strong>Remarks:</strong><br/><span style="white-space: pre-wrap;">${escapePlainText(r.Remarks)}</span></div>` : ''}

@@ -827,6 +827,7 @@ export type Database = {
       }
       meal_recipes: {
         Row: {
+          Calories: number | null
           created_at: string
           id: string
           Ingredients: string
@@ -836,6 +837,7 @@ export type Database = {
           Remarks: string
         }
         Insert: {
+          Calories?: number | null
           created_at?: string
           id?: string
           Ingredients?: string
@@ -845,6 +847,7 @@ export type Database = {
           Remarks?: string
         }
         Update: {
+          Calories?: number | null
           created_at?: string
           id?: string
           Ingredients?: string
